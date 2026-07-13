@@ -5,9 +5,10 @@ metadata:
   namespace: spark
 data:
   spark-defaults.conf: |
-    # S3A via IRSA — hadoop-aws 3.4.x is on AWS SDK v2; the v2 default chain
-    # picks up the web-identity token the service account role injects.
-    spark.hadoop.fs.s3a.aws.credentials.provider  software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+    # S3A via IRSA — hadoop-aws 3.4.x is on AWS SDK v2. Pin the web-identity
+    # provider (the SA-injected role) so nothing falls back to the node role.
+    spark.hadoop.fs.s3a.aws.credentials.provider  software.amazon.awssdk.auth.credentials.WebIdentityTokenFileCredentialsProvider
+    spark.hadoop.fs.s3a.endpoint.region            us-west-2
     spark.hadoop.fs.s3a.path.style.access          false
 
     # Executors must reach the driver (Connect server) via a resolvable name;
@@ -24,3 +25,6 @@ data:
     # Warehouse for pipeline tables. Replace the bucket with the value of
     # `terraform output pipeline_bucket`.
     spark.sql.warehouse.dir                        s3a://sdp-pipeline-storage-68729b89/warehouse
+
+    # Keep the Derby metastore on the PVC so the catalog survives restarts.
+    spark.hadoop.javax.jdo.option.ConnectionURL    jdbc:derby:;databaseName=/opt/spark/metastore/metastore_db;create=true

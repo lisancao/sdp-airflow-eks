@@ -9,6 +9,8 @@ metadata:
   labels: {app: spark-connect}
 spec:
   replicas: 1
+  # RWO metastore volume — old pod must release it before the new one starts
+  strategy: {type: Recreate}
   selector:
     matchLabels: {app: spark-connect}
   template:
@@ -47,9 +49,24 @@ spec:
             limits: {memory: 3Gi}
           volumeMounts:
             - {name: spark-defaults, mountPath: /opt/spark/conf/spark-defaults.conf, subPath: spark-defaults.conf}
+            - {name: metastore, mountPath: /opt/spark/metastore}
+      securityContext:
+        fsGroup: 185
       volumes:
         - name: spark-defaults
           configMap: {name: spark-defaults}
+        - name: metastore
+          persistentVolumeClaim: {claimName: spark-metastore}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: spark-metastore
+  namespace: spark
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: {storage: 2Gi}
 ---
 apiVersion: v1
 kind: Service
