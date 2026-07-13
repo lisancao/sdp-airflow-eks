@@ -16,6 +16,7 @@ spec:
       labels: {app: spark-connect}
     spec:
       serviceAccountName: spark
+      enableServiceLinks: false
       containers:
         - name: connect
           image: apache/spark:4.1.0
@@ -26,9 +27,14 @@ spec:
             # hadoop-aws + AWS SDK for s3a:// pipeline storage
             - --packages
             - org.apache.hadoop:hadoop-aws:3.4.1,software.amazon.awssdk:bundle:2.24.6
+            # The image's runtime user has no writable HOME; keep Ivy in /tmp
+            - --conf
+            - spark.jars.ivy=/tmp/.ivy2
           env:
             - name: SPARK_NO_DAEMONIZE
               value: "1"
+            - name: HOME
+              value: /tmp
           ports:
             - {containerPort: 15002, name: connect}
             - {containerPort: 4040, name: ui}

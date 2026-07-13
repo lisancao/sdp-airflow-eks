@@ -13,6 +13,7 @@ spec:
       labels: {app: spark-worker}
     spec:
       serviceAccountName: spark
+      enableServiceLinks: false
       containers:
         - name: worker
           image: apache/spark:4.1.0
