@@ -21,7 +21,7 @@ PIPELINE_SPEC = "/opt/airflow/dags/repo/pipelines/spark-pipeline.yml"
 
 with DAG(
     dag_id="sdp_validate_then_run",
-    description="Dry-run the pipeline spec, then execute a full refresh",
+    description="Dry-run the pipeline spec, then execute it",
     schedule="@daily",
     start_date=datetime(2026, 7, 1),
     catchup=False,
@@ -33,11 +33,12 @@ with DAG(
         pipeline_command="dry-run",
     )
 
+    # Note: the provider operator (>= 6.2.0) does not expose the CLI's
+    # --full-refresh flags yet, so this is a default incremental run.
     run = SparkPipelinesOperator(
         task_id="run",
         pipeline_spec=PIPELINE_SPEC,
         pipeline_command="run",
-        full_refresh=True,
     )
 
     validate >> run

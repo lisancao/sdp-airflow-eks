@@ -12,6 +12,11 @@ executor: "KubernetesExecutor"
 # Every SDP task attaches to the long-running Spark Connect server as a
 # client. Without this the pipelines CLI tries to launch its own Spark.
 env:
+  # The official SparkPipelinesOperator resolves the Connect server from
+  # this spark_connect-typed connection and sets SPARK_REMOTE itself.
+  - name: AIRFLOW_CONN_SPARK_DEFAULT
+    value: spark-connect://spark-connect.spark.svc.cluster.local:15002
+  # Kept for the vendored fallback operator (pre-6.2.0 provider images).
   - name: SPARK_REMOTE
     value: sc://spark-connect.spark.svc.cluster.local:15002
   - name: PYTHONPATH
