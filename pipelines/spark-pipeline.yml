@@ -3,7 +3,7 @@
 # Connect server — replace the bucket with `terraform output pipeline_bucket`.
 name: events_pipeline
 
-storage: s3a://REPLACE_PIPELINE_BUCKET/pipelines/events
+storage: s3a://sdp-pipeline-storage-68729b89/pipelines/events
 
 libraries:
   - glob:

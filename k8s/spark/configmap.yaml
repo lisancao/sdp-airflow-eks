@@ -15,4 +15,4 @@ data:
 
     # Warehouse for pipeline tables. Replace the bucket with the value of
     # `terraform output pipeline_bucket`.
-    spark.sql.warehouse.dir                        s3a://REPLACE_PIPELINE_BUCKET/warehouse
+    spark.sql.warehouse.dir                        s3a://sdp-pipeline-storage-68729b89/warehouse

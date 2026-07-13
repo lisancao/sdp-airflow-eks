@@ -25,6 +25,7 @@ deploy-airflow: ## Install/upgrade Airflow via the official Helm chart
 	helm upgrade --install airflow apache-airflow/airflow \
 		--namespace $(AIRFLOW_NS) --create-namespace \
 		-f k8s/airflow-values.yaml \
+		$(shell [ -f k8s/airflow-values.local.yaml ] && echo "-f k8s/airflow-values.local.yaml") \
 		--timeout 15m
 
 users: ## Generate access tokens for named users (edit USERS in the script)
