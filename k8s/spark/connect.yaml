@@ -1,0 +1,57 @@
+# Long-running Spark Connect server. SDP tasks (Airflow task pods) attach
+# as clients via sc://spark-connect.spark.svc.cluster.local:15002 and the
+# pipeline executes on the standalone cluster behind it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-connect
+  namespace: spark
+  labels: {app: spark-connect}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: spark-connect}
+  template:
+    metadata:
+      labels: {app: spark-connect}
+    spec:
+      serviceAccountName: spark
+      containers:
+        - name: connect
+          image: apache/spark:4.1.0
+          command:
+            - /opt/spark/sbin/start-connect-server.sh
+            - --master
+            - spark://spark-master:7077
+            # hadoop-aws + AWS SDK for s3a:// pipeline storage
+            - --packages
+            - org.apache.hadoop:hadoop-aws:3.4.1,software.amazon.awssdk:bundle:2.24.6
+          env:
+            - name: SPARK_NO_DAEMONIZE
+              value: "1"
+          ports:
+            - {containerPort: 15002, name: connect}
+            - {containerPort: 4040, name: ui}
+          readinessProbe:
+            tcpSocket: {port: 15002}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 500m, memory: 2Gi}
+            limits: {memory: 3Gi}
+          volumeMounts:
+            - {name: spark-defaults, mountPath: /opt/spark/conf/spark-defaults.conf, subPath: spark-defaults.conf}
+      volumes:
+        - name: spark-defaults
+          configMap: {name: spark-defaults}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-connect
+  namespace: spark
+spec:
+  selector: {app: spark-connect}
+  ports:
+    - {name: connect, port: 15002, targetPort: 15002}
+    - {name: ui, port: 4040, targetPort: 4040}

@@ -1,0 +1,77 @@
+# Values for the official Apache Airflow Helm chart (>= 1.20.0, Airflow 3.x).
+# Install: make deploy-airflow
+airflowVersion: "3.1.8"
+
+# Custom image with pyspark[connect] + the SDP operator baked in.
+# Built by .github/workflows/build-image.yml on every push to main.
+defaultAirflowRepository: ghcr.io/lisancao/sdp-airflow-eks/airflow
+defaultAirflowTag: "latest"
+
+executor: "KubernetesExecutor"
+
+# Every SDP task attaches to the long-running Spark Connect server as a
+# client. Without this the pipelines CLI tries to launch its own Spark.
+env:
+  - name: SPARK_REMOTE
+    value: sc://spark-connect.spark.svc.cluster.local:15002
+  - name: PYTHONPATH
+    value: /opt/airflow/dags/repo/dags
+
+# DAGs come from this repo via git-sync — push to main, DAGs update.
+dags:
+  gitSync:
+    enabled: true
+    repo: https://github.com/lisancao/sdp-airflow-eks.git
+    branch: main
+    subPath: dags
+    period: 60s
+
+# Airflow 3 requires the standalone DAG processor.
+dagProcessor:
+  enabled: true
+
+# Public ALB in front of the API server (UI + REST API).
+# The inbound CIDR list is the outer access gate; Airflow user accounts
+# (scripts/create-users.sh) are the inner one.
+ingress:
+  apiServer:
+    enabled: true
+    annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+      alb.ingress.kubernetes.io/healthcheck-path: /api/v2/monitor/health
+      # Tighten to your users' networks (mirrors terraform allowed_cidrs):
+      alb.ingress.kubernetes.io/inbound-cidrs: 0.0.0.0/0
+    ingressClassName: alb
+    path: "/"
+    pathType: Prefix
+
+# The chart's createUserJob bootstraps admin/admin. Run
+# scripts/create-users.sh to mint real per-person credentials, then
+# delete or rotate the bootstrap account.
+
+# KubernetesExecutor task pods and the scheduler get S3 access via IRSA.
+# Fill the role ARN from: terraform output airflow_irsa_role_arn
+workers:
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: ""
+
+scheduler:
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: ""
+
+# Task pods need room for the Spark Connect client + pandas.
+config:
+  kubernetes_executor:
+    worker_container_repository: ghcr.io/lisancao/sdp-airflow-eks/airflow
+    worker_container_tag: "latest"
+
+postgresql:
+  enabled: true
+
+# Redis only matters for Celery; Kubernetes executor doesn't need it.
+redis:
+  enabled: false

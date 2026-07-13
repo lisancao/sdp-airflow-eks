@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: spark
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spark
+  namespace: spark
+  annotations:
+    # Fill from: terraform output spark_irsa_role_arn
+    eks.amazonaws.com/role-arn: ""

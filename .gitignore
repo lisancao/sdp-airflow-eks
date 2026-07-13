@@ -1,0 +1,23 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform/example.tfvars
+.terraform/
+.terraform.lock.hcl
+crash.log
+
+# Credentials — never commit generated user tokens
+credentials*.txt
+*.pem
+kubeconfig*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editor
+.idea/
+.vscode/
+*.swp

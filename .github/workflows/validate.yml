@@ -1,0 +1,41 @@
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform -chdir=terraform init -backend=false
+      - run: terraform -chdir=terraform validate
+      - run: terraform -chdir=terraform fmt -check -recursive
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - run: |
+          helm repo add apache-airflow https://airflow.apache.org
+          helm template airflow apache-airflow/airflow --version 1.20.0 \
+            -n airflow -f k8s/airflow-values.yaml > /dev/null
+
+  dags:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install 'apache-airflow==3.1.8' 'pyspark[connect]==4.1.0' apache-airflow-providers-apache-spark==5.5.0
+      - name: Import DAGs
+        run: |
+          export PYTHONPATH=$PWD/dags
+          for f in dags/*.py; do python "$f"; done
+      - name: Dry-run pipeline spec syntax
+        run: python -c "import yaml; yaml.safe_load(open('pipelines/spark-pipeline.yml'))"

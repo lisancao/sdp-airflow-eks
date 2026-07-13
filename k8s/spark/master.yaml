@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-master
+  namespace: spark
+  labels: {app: spark-master}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: spark-master}
+  template:
+    metadata:
+      labels: {app: spark-master}
+    spec:
+      serviceAccountName: spark
+      containers:
+        - name: master
+          image: apache/spark:4.1.0
+          command: ["/opt/spark/sbin/start-master.sh"]
+          env:
+            - name: SPARK_NO_DAEMONIZE
+              value: "1"
+            - name: SPARK_MASTER_HOST
+              value: "0.0.0.0"
+          ports:
+            - {containerPort: 7077, name: master}
+            - {containerPort: 8080, name: ui}
+          readinessProbe:
+            httpGet: {path: /, port: 8080}
+            initialDelaySeconds: 10
+          resources:
+            requests: {cpu: 250m, memory: 1Gi}
+            limits: {memory: 2Gi}
+          volumeMounts:
+            - {name: spark-defaults, mountPath: /opt/spark/conf/spark-defaults.conf, subPath: spark-defaults.conf}
+      volumes:
+        - name: spark-defaults
+          configMap: {name: spark-defaults}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-master
+  namespace: spark
+spec:
+  selector: {app: spark-master}
+  ports:
+    - {name: master, port: 7077, targetPort: 7077}
+    - {name: ui, port: 8080, targetPort: 8080}

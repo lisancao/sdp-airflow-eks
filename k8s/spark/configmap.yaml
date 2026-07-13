@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-defaults
+  namespace: spark
+data:
+  spark-defaults.conf: |
+    # S3A via IRSA — the pod's service account role provides credentials.
+    spark.hadoop.fs.s3a.aws.credentials.provider  com.amazonaws.auth.WebIdentityTokenCredentialsProvider
+    spark.hadoop.fs.s3a.path.style.access          false
+
+    # Pipeline defaults
+    spark.sql.shuffle.partitions                   8
+    spark.sql.adaptive.enabled                     true
+
+    # Warehouse for pipeline tables. Replace the bucket with the value of
+    # `terraform output pipeline_bucket`.
+    spark.sql.warehouse.dir                        s3a://REPLACE_PIPELINE_BUCKET/warehouse

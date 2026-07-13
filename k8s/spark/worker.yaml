@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-worker
+  namespace: spark
+  labels: {app: spark-worker}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: spark-worker}
+  template:
+    metadata:
+      labels: {app: spark-worker}
+    spec:
+      serviceAccountName: spark
+      containers:
+        - name: worker
+          image: apache/spark:4.1.0
+          command: ["/opt/spark/sbin/start-worker.sh", "spark://spark-master:7077"]
+          env:
+            - name: SPARK_NO_DAEMONIZE
+              value: "1"
+            - name: SPARK_WORKER_CORES
+              value: "2"
+            - name: SPARK_WORKER_MEMORY
+              value: "4g"
+          ports:
+            - {containerPort: 8081, name: ui}
+          resources:
+            requests: {cpu: "1", memory: 4Gi}
+            limits: {memory: 5Gi}
+          volumeMounts:
+            - {name: spark-defaults, mountPath: /opt/spark/conf/spark-defaults.conf, subPath: spark-defaults.conf}
+      volumes:
+        - name: spark-defaults
+          configMap: {name: spark-defaults}

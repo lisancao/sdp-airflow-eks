@@ -1,0 +1,15 @@
+# Spark Declarative Pipelines spec.
+# `storage` must be absolute and resolves SERVER-SIDE, inside the Spark
+# Connect server — replace the bucket with `terraform output pipeline_bucket`.
+name: events_pipeline
+
+storage: s3a://REPLACE_PIPELINE_BUCKET/pipelines/events
+
+libraries:
+  - glob:
+      include: transformations/**
+
+database: events
+
+configuration:
+  spark.sql.shuffle.partitions: "8"
