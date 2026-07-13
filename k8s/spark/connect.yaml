@@ -61,3 +61,6 @@ spec:
   ports:
     - {name: connect, port: 15002, targetPort: 15002}
     - {name: ui, port: 4040, targetPort: 4040}
+    # Driver RPC + block manager — executors dial back through the Service
+    - {name: driver, port: 7078, targetPort: 7078}
+    - {name: blockmanager, port: 7079, targetPort: 7079}

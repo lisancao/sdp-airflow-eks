@@ -5,9 +5,17 @@ metadata:
   namespace: spark
 data:
   spark-defaults.conf: |
-    # S3A via IRSA — the pod's service account role provides credentials.
-    spark.hadoop.fs.s3a.aws.credentials.provider  com.amazonaws.auth.WebIdentityTokenCredentialsProvider
+    # S3A via IRSA — hadoop-aws 3.4.x is on AWS SDK v2; the v2 default chain
+    # picks up the web-identity token the service account role injects.
+    spark.hadoop.fs.s3a.aws.credentials.provider  software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
     spark.hadoop.fs.s3a.path.style.access          false
+
+    # Executors must reach the driver (Connect server) via a resolvable name;
+    # the default is the pod name, which k8s DNS can't resolve.
+    spark.driver.host                              spark-connect.spark.svc.cluster.local
+    spark.driver.bindAddress                       0.0.0.0
+    spark.driver.port                              7078
+    spark.blockManager.port                        7079
 
     # Pipeline defaults
     spark.sql.shuffle.partitions                   8
