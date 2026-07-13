@@ -50,6 +50,7 @@ terraform -chdir=terraform output    # bucket name + IRSA role ARNs
 # 3. Apps
 make deploy-spark
 make deploy-airflow
+make init-schema   # one-time: SDP requires the target database to exist
 
 # 4. Access
 make users     # generates per-person tokens (edit USERS in the script first)

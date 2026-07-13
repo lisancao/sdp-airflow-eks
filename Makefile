@@ -29,6 +29,12 @@ deploy-airflow: ## Install/upgrade Airflow via the official Helm chart
 		$(shell [ -f k8s/airflow-values.local.yaml ] && echo "-f k8s/airflow-values.local.yaml") \
 		--timeout 15m
 
+init-schema: ## One-time: create the database the pipeline spec targets
+	kubectl -n $(AIRFLOW_NS) exec deploy/airflow-dag-processor -c dag-processor -- \
+		env SPARK_REMOTE=sc://spark-connect.$(SPARK_NS).svc.cluster.local:15002 \
+		python -c "from pyspark.sql import SparkSession; \
+		SparkSession.builder.getOrCreate().sql('CREATE DATABASE IF NOT EXISTS events')"
+
 users: ## Generate access tokens for named users (edit USERS in the script)
 	./scripts/create-users.sh
 
