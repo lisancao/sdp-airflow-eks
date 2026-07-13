@@ -16,6 +16,7 @@ kubeconfig: ## Point kubectl at the cluster
 	aws eks update-kubeconfig --region $(AWS_REGION) --name $(CLUSTER_NAME)
 
 deploy-spark: ## Deploy Spark master, workers, and Connect server
+	kubectl apply -f k8s/storageclass.yaml
 	kubectl apply -f k8s/spark/namespace.yaml
 	kubectl -n $(SPARK_NS) apply -f k8s/spark/
 
