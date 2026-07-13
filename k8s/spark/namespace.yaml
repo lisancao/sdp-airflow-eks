@@ -3,11 +3,12 @@ kind: Namespace
 metadata:
   name: spark
 ---
+# IRSA: after `terraform apply`, annotate this service account (re-applying
+# this file must NOT carry an empty placeholder, or it wipes the annotation):
+#   kubectl -n spark annotate sa spark \
+#     eks.amazonaws.com/role-arn="$(terraform -chdir=terraform output -raw spark_irsa_role_arn)" --overwrite
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: spark
   namespace: spark
-  annotations:
-    # Fill from: terraform output spark_irsa_role_arn
-    eks.amazonaws.com/role-arn: ""
