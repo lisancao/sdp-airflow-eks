@@ -7,8 +7,8 @@
 .terraform.lock.hcl
 crash.log
 
-# Credentials — never commit generated user tokens
-credentials*.txt
+# Credentials — never commit generated user tokens or keys
+credentials*
 # Local values with account-specific ARNs (kept out of the public repo)
 k8s/*.local.yaml
 *.pem
