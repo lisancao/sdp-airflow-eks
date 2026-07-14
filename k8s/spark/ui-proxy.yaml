@@ -21,6 +21,9 @@ data:
         proxy_pass http://spark-connect.spark.svc.cluster.local:4040;
         proxy_set_header Host $host;
         proxy_http_version 1.1;
+        # Spark redirects to its own host:4040; strip that so the
+        # public hostname keeps working through the proxy
+        proxy_redirect ~^https?://[^/]+:4040/(.*)$ /$1;
       }
     }
 ---
