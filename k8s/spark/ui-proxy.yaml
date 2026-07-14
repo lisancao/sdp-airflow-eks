@@ -1,0 +1,90 @@
+# Public access to the Spark application UI (port 4040) behind nginx
+# basic auth — the Spark UI itself has no authentication, so it must
+# never be exposed raw.
+#
+# One-time secret (not in git):
+#   htpasswd=$(openssl passwd -apr1 "$SPARK_UI_PASSWORD")
+#   kubectl -n spark create secret generic spark-ui-htpasswd \
+#     --from-literal=htpasswd="sparkui:$htpasswd"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-ui-proxy-conf
+  namespace: spark
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      location / {
+        auth_basic "Spark UI";
+        auth_basic_user_file /etc/nginx/htpasswd/htpasswd;
+        proxy_pass http://spark-connect.spark.svc.cluster.local:4040;
+        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-ui-proxy
+  namespace: spark
+  labels: {app: spark-ui-proxy}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: spark-ui-proxy}
+  template:
+    metadata:
+      labels: {app: spark-ui-proxy}
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - {containerPort: 8080}
+          volumeMounts:
+            - {name: conf, mountPath: /etc/nginx/conf.d}
+            - {name: htpasswd, mountPath: /etc/nginx/htpasswd}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {memory: 128Mi}
+      volumes:
+        - name: conf
+          configMap: {name: spark-ui-proxy-conf}
+        - name: htpasswd
+          secret: {secretName: spark-ui-htpasswd}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-ui-proxy
+  namespace: spark
+spec:
+  selector: {app: spark-ui-proxy}
+  ports:
+    - {name: http, port: 8080, targetPort: 8080}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spark-ui
+  namespace: spark
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    # Unauthenticated probes get 401 — that IS healthy here
+    alb.ingress.kubernetes.io/success-codes: "200,401"
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spark-ui-proxy
+                port: {number: 8080}

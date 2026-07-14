@@ -1,0 +1,15 @@
+# Deliberately broken pipeline — demo prop for the dry-run gate.
+# The transformation reads a table that no flow produces, so graph
+# validation fails before any data is touched.
+name: broken_events_pipeline
+
+storage: s3a://sdp-pipeline-storage-68729b89/pipelines/broken-demo
+
+libraries:
+  - glob:
+      include: transformations/**
+
+database: events
+
+configuration:
+  spark.sql.shuffle.partitions: "8"

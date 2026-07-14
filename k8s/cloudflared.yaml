@@ -1,0 +1,64 @@
+# Cloudflare Tunnel: exposes the Airflow UI and Spark UI on
+# systemsnull.net subdomains with Cloudflare TLS (+ Access/2FA if an
+# Access application covers these hostnames).
+#
+# One-time secret (tunnel credentials, not in git):
+#   kubectl -n cloudflared create secret generic tunnel-credentials \
+#     --from-file=credentials.json=$HOME/.cloudflared/<TUNNEL_ID>.json
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudflared
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: cloudflared
+data:
+  config.yaml: |
+    tunnel: sdp-eks
+    credentials-file: /etc/cloudflared/creds/credentials.json
+    metrics: 0.0.0.0:2000
+    ingress:
+      - hostname: airflow.systemsnull.net
+        service: http://airflow-api-server.airflow.svc.cluster.local:8080
+      # Spark UI goes through the nginx basic-auth proxy so it is never
+      # reachable unauthenticated, even if no Access policy matches.
+      - hostname: spark.systemsnull.net
+        service: http://spark-ui-proxy.spark.svc.cluster.local:8080
+      - service: http_status:404
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  namespace: cloudflared
+  labels: {app: cloudflared}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: cloudflared}
+  template:
+    metadata:
+      labels: {app: cloudflared}
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:latest
+          args: ["tunnel", "--no-autoupdate", "--config", "/etc/cloudflared/config/config.yaml", "run"]
+          livenessProbe:
+            httpGet: {path: /ready, port: 2000}
+            initialDelaySeconds: 10
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {memory: 128Mi}
+          volumeMounts:
+            - {name: config, mountPath: /etc/cloudflared/config}
+            - {name: creds, mountPath: /etc/cloudflared/creds}
+      volumes:
+        - name: config
+          configMap: {name: cloudflared-config}
+        - name: creds
+          secret: {secretName: tunnel-credentials}
